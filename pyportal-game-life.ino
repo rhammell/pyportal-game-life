@@ -1,6 +1,7 @@
 #include "Adafruit_ILI9341.h"
+#include "TouchScreen.h"
 
-// Pin settings for PyPortal
+// Pins settings for PyPortal tft-lcd display
 #define TFT_D0        34 // Data bit 0 pin (MUST be on PORT byte boundary)
 #define TFT_WR        26 // Write-strobe pin (CCL-inverted timer output)
 #define TFT_DC        10 // Data/command pin
@@ -12,24 +13,43 @@
 // Pyportal display object
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, TFT_D0, TFT_WR, TFT_DC, TFT_CS, TFT_RST, TFT_RD);
 
+// Touchscreen Pins
+#define YP A4  // must be an analog pin, use "An" notation!
+#define XM A7  // must be an analog pin, use "An" notation!
+#define YM A6   // can be a digital pin
+#define XP A5   // can be a digital pin
+
+// Touchscreen calibrations
+#define X_MIN  160
+#define X_MAX  917
+#define Y_MIN  947
+#define Y_MAX  136
+
+// Touchscreen object
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 3000);
+
 // Screen dimension
 int screen_width = 240;
 int screen_height = 320;
-int count = 0;
 
-// Board layout params
-int cell_size = 5;
+// Touch tracking
+bool touch_active = false;
+int release_threshold = 10;
+int release_count = 0;
+
+// Game board layout params
+int cell_size = 6;
 int num_rows = (screen_height - 1) / cell_size;
 int num_cols = (screen_width - 1) / cell_size;
 int x_width = cell_size * num_cols;
 int y_width = cell_size * num_rows;
 int x_offset = (screen_width - x_width) / 2;
 int y_offset = (screen_height - y_width) / 2;
-bool show_grid = false;
+bool show_grid = true;
 
-// Board display colors
-int cell_color = ILI9341_WHITE;
-int background_color = ILI9341_BLACK;
+// Game board display colors
+int cell_color = ILI9341_BLACK;
+int background_color = ILI9341_WHITE;
 int grid_color = ILI9341_LIGHTGREY;
 
 // Initialize dynamically sized game array
@@ -76,14 +96,14 @@ void randomizeGame() {
 }
 
 void stepGame() {
-  // Reset temp game
+  // Reset temp game array
   for (int i = 0; i < num_rows; i++) {
     for (int j = 0; j < num_cols; j++) {
       temp_game[i][j] = 0;
     }
   }
 
-  // Compute temp updates
+  // Compute temp game updates
   for (int i = 0; i < num_rows; i++) {
     for (int j = 0; j < num_cols; j++) {
       int neighbors = countNeighbors(i, j);
@@ -103,7 +123,7 @@ void stepGame() {
     }
   }
 
-  // Copy updates to game
+  // Copy updates to game array
   for (int i = 0; i < num_rows; i++) {
     for (int j = 0; j < num_cols; j++) {
       game[i][j] = temp_game[i][j];
@@ -129,7 +149,7 @@ int countNeighbors(int x, int y) {
 }
 
 void drawGame() {
-  // Draw grid
+  // Draw game grid
   if (show_grid == true) {
     for (int i=0; i<num_rows+1; i++) {
       tft.drawLine(x_offset, i * cell_size + y_offset, x_width + x_offset, i * cell_size + y_offset, grid_color);
@@ -139,34 +159,81 @@ void drawGame() {
     }
   }
 
-  // Draw cells
+  // Draw game cells
   for (int i=0; i<num_rows; i++) {
     for (int j=0; j<num_cols; j++) {
+
       // Get cell color
-      int cell_value = game[i][j];
-      int color;
-      if (cell_value == 1) {
-        color = cell_color;
-      } else {
-        color = background_color;
-      }
+      int color = (game[i][j] == 1) ? cell_color : background_color;
+
+      // Get grid offset
+      int grid_offset = (show_grid == true) ? 1 : 0;
+
       // Draw cell rect
-      int grid_offset;
-      if (show_grid == true) {
-        grid_offset = 1;
-      } else {
-        grid_offset = 0;
-      }      
-      tft.fillRect(j * cell_size + x_offset + grid_offset, i * cell_size + y_offset + grid_offset, cell_size - grid_offset, cell_size - grid_offset, color);
+      tft.fillRect(
+        j * cell_size + x_offset + grid_offset, 
+        i * cell_size + y_offset + grid_offset, 
+        cell_size - grid_offset, 
+        cell_size - grid_offset, 
+        color
+      );
     }
   }
 }
 
 
 void loop() {
-  stepGame();
+
+  // Get touch info
+  TSPoint p = ts.getPoint();
+  
+  // Handle touch detected
+  if (p.z > ts.pressureThreshhold) {
+
+    // Get touch coorinates
+    int x = map(p.x, X_MIN, X_MAX, 0, 240);
+    int y = map(p.y, Y_MIN, Y_MAX, 0, 320);
+
+    // Check if touch was on game board
+    x = x - x_offset;
+    y = y - y_offset;
+    if (x >= 0 && x <= x_width && y >= 0 && y <= y_width) {
+
+      // Activate touched cell
+      int row = map(y, 0, y_width, 0, num_rows);
+      int col = map(x, 0, x_width, 0, num_cols);
+      game[row][col] = 1;
+
+      // Reset release count
+      release_count = 0;
+
+      // Set touch as active
+      if (touch_active == false) {
+        touch_active = true;
+        Serial.println("Touch Started"); 
+      }
+    }
+  }
+
+  // Handle touch not detected
+  else {
+    // Set touch as not active if released
+    if (touch_active == true) {
+      if (release_count >= release_threshold) {
+        touch_active = false;
+        Serial.println("Touch Ended"); 
+      } else {
+        release_count++;
+      }
+    }
+  }    
+
+  // Step game forward if no touch detected
+  if (touch_active == false) {
+    stepGame();
+    delay(50);
+  }
+
+  // Draw game board
   drawGame();
-  delay(10);
-  count++;
-  Serial.println(count);
 }
