@@ -13,81 +13,77 @@
 // Pyportal display object
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, TFT_D0, TFT_WR, TFT_DC, TFT_CS, TFT_RST, TFT_RD);
 
-// Touchscreen Pins
-#define YP A4  // must be an analog pin, use "An" notation!
-#define XM A7  // must be an analog pin, use "An" notation!
-#define YM A6   // can be a digital pin
-#define XP A5   // can be a digital pin
-
-// Touchscreen calibrations
-#define X_MIN  160
-#define X_MAX  917
-#define Y_MIN  947
-#define Y_MAX  136
-
-// Touchscreen object
-TouchScreen ts = TouchScreen(XP, YP, XM, YM, 3000);
-
 // Screen dimension
-int screen_width = 240;
-int screen_height = 320;
-
-// Touch tracking
-bool touch_active = false;
-int release_threshold = 10;
-int release_count = 0;
+int screen_width = tft.width();
+int screen_height = tft.height();
 
 // Game board layout params
-int cell_size = 6;
+int cell_size = 10;
 int num_rows = (screen_height - 1) / cell_size;
 int num_cols = (screen_width - 1) / cell_size;
 int x_width = cell_size * num_cols;
 int y_width = cell_size * num_rows;
 int x_offset = (screen_width - x_width) / 2;
 int y_offset = (screen_height - y_width) / 2;
-bool show_grid = true;
 
 // Game board display colors
 int cell_color = ILI9341_BLACK;
 int background_color = ILI9341_WHITE;
 int grid_color = ILI9341_LIGHTGREY;
 
-// Initialize dynamically sized game array
+// Create dynamically sized game array
 int** game;
 int** temp_game;
 
+// Touchscreen Pins
+#define YP A4  
+#define XM A7  
+#define YM A6  
+#define XP A5  
+
+// Touchscreen object
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 3000);
+
+// Touchscreen calibrations
+#define X_MIN  182
+#define Y_MIN  924
+#define X_MAX  901
+#define Y_MAX  137
+
+// Touch tracking
+bool touch_active = false;
+int release_threshold = 10;
+int release_count = 0;
+
 void setup() {
-  Serial.begin(9600);
 
-  // Initialize display
-  tft.begin();
-  tft.fillScreen(ILI9341_BLACK);
+    // Initialize serial communication
+    Serial.begin(9600);
 
-  // Turn on backlight 
-  pinMode(TFT_BACKLIGHT, OUTPUT);
-  digitalWrite(TFT_BACKLIGHT, HIGH);
+    // Initialize display
+    tft.begin();
+    tft.fillScreen(ILI9341_BLACK);
 
-  // Initialize game arrays
-  initGame();
+    // Turn on display backlight 
+    pinMode(TFT_BACKLIGHT, OUTPUT);
+    digitalWrite(TFT_BACKLIGHT, HIGH);
+
+    // Initialize game
+    initGame();
 }
 
+void initGame() {
 
-void initGame() {  
   // Create game and temp_game of dynamic size
   // based on number of rows and cols
   game = new int*[num_rows];
   temp_game = new int*[num_rows];
   for(int i = 0; i < num_rows; i++) {
-      game[i] = new int[num_cols];
-      temp_game[i] = new int[num_cols];
+    game[i] = new int[num_cols];
+    temp_game[i] = new int[num_cols];
   }
 
-  // Randomize initial pattern
-  randomizeGame();
-}
-
-void randomizeGame() {
-  // Add random pattern to the game
+  // Randomize initial cell activtion
   for (int i=0; i<num_rows; i++) {
     for (int j=0; j<num_cols; j++) {
       game[i][j] = random(2);
@@ -96,6 +92,7 @@ void randomizeGame() {
 }
 
 void stepGame() {
+
   // Reset temp game array
   for (int i = 0; i < num_rows; i++) {
     for (int j = 0; j < num_cols; j++) {
@@ -132,6 +129,7 @@ void stepGame() {
 }
 
 int countNeighbors(int x, int y) {
+
   // Return number of neighbors for input x,y position,
   // calculated using edge-wrapping
   int count = 0;
@@ -149,14 +147,13 @@ int countNeighbors(int x, int y) {
 }
 
 void drawGame() {
+
   // Draw game grid
-  if (show_grid == true) {
-    for (int i=0; i<num_rows+1; i++) {
-      tft.drawLine(x_offset, i * cell_size + y_offset, x_width + x_offset, i * cell_size + y_offset, grid_color);
+  for (int i=0; i<num_rows+1; i++) {
+        tft.drawLine(x_offset, i * cell_size + y_offset, x_width + x_offset, i * cell_size + y_offset, grid_color); // horizontal lines
     }
-    for (int i=0; i<num_cols+1; i++) {
-      tft.drawLine(i * cell_size + x_offset, y_offset, i * cell_size + x_offset, y_width + y_offset, grid_color);
-    }
+  for (int i=0; i<num_cols+1; i++) {
+        tft.drawLine(i * cell_size + x_offset, y_offset, i * cell_size + x_offset, y_width + y_offset, grid_color);
   }
 
   // Draw game cells
@@ -166,57 +163,56 @@ void drawGame() {
       // Get cell color
       int color = (game[i][j] == 1) ? cell_color : background_color;
 
-      // Get grid offset
-      int grid_offset = (show_grid == true) ? 1 : 0;
-
       // Draw cell rect
       tft.fillRect(
-        j * cell_size + x_offset + grid_offset, 
-        i * cell_size + y_offset + grid_offset, 
-        cell_size - grid_offset, 
-        cell_size - grid_offset, 
+        j * cell_size + x_offset + 1,
+        i * cell_size + y_offset + 1,
+        cell_size - 1,
+        cell_size - 1,
         color
       );
     }
   }
 }
 
-
 void loop() {
 
-  // Get touch info
+  // Get touch point
   TSPoint p = ts.getPoint();
-  
-  // Handle touch detected
+
+  // Handle touch event
   if (p.z > ts.pressureThreshhold) {
 
-    // Get touch coorinates
-    int x = map(p.x, X_MIN, X_MAX, 0, 240);
-    int y = map(p.y, Y_MIN, Y_MAX, 0, 320);
+    // Calculate touch pixel coordinates
+    int x = map(p.x, X_MIN, X_MAX, 0, screen_width);
+    int y = map(p.y, Y_MIN, Y_MAX, 0, screen_height);
 
     // Check if touch was on game board
     x = x - x_offset;
     y = y - y_offset;
     if (x >= 0 && x <= x_width && y >= 0 && y <= y_width) {
 
-      // Activate touched cell
+      // Calculate touched cell position
       int row = map(y, 0, y_width, 0, num_rows);
       int col = map(x, 0, x_width, 0, num_cols);
-      game[row][col] = 1;
 
-      // Reset release count
-      release_count = 0;
+      // Activate touched cell
+      game[row][col] = 1;
 
       // Set touch as active
       if (touch_active == false) {
         touch_active = true;
         Serial.println("Touch Started"); 
       }
+
+      // Reset release count
+      release_count = 0;
     }
   }
-
-  // Handle touch not detected
+  
+  // Handle no touch event
   else {
+
     // Set touch as not active if released
     if (touch_active == true) {
       if (release_count >= release_threshold) {
@@ -226,14 +222,14 @@ void loop() {
         release_count++;
       }
     }
-  }    
+  }   
 
   // Step game forward if no touch detected
   if (touch_active == false) {
     stepGame();
-    delay(50);
+    delay(80);
   }
-
-  // Draw game board
+  
+  // Draw game on display
   drawGame();
 }
