@@ -1,5 +1,7 @@
-# pyportal-flight-tracker
-This repository contains an Arduino sketch which builds and displays a touch-enabled version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) on an Adafruit PyPortal. Read a full build tutorial for this project on [Hackster.io](https://www.hackster.io/rhammell/pyportal-flight-tracker-0be6b0).
+# pyportal-game-life
+This project contains an Arduino sketch which builds a touch-enabled version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) on an Adafruit PyPortal. 
+
+Read a full build tutorial for this project on [Hackster.io](https://www.hackster.io/rhammell/pyportal-flight-tracker-0be6b0).
 
 ## How It Works
 Conway's Game of Life is a popular mathematical simulation that takes place on a 2D grid composed of cells that are either "live" or "dead". During each game round, or "generation", rules are applied which determine if each cell lives or dies in the next round. 
