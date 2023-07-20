@@ -13,5 +13,5 @@ The game is implemented on a PyPortal through this project's Arduino sketch. The
 Additionally, user are able to interact with the game by toucing any cell on the PyPortal screen to change its state to live. Touch events are captured and processed by the sketch to update the selected cell. 
 
 ## Completed Project
-<img src="img/pyportal.jpg">
+<img src="img/game.jpg">
 
