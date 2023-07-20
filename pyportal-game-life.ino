@@ -44,7 +44,7 @@ int grid_color = ILI9341_LIGHTGREY;
 #define XL A4
 
 // Touchscreen object
-TouchScreen ts = TouchScreen(XL, YD, XR, YU, 3000);
+TouchScreen ts = TouchScreen(XL, YD, XR, YU, 300);
 
 // Touchscreen calibrations
 #define TS_MINX 133
@@ -57,6 +57,7 @@ bool touch_active = false;
 int release_threshold = 10;
 int release_count = 0;
 
+const int analogOutPin = 25;
 
 void setup() {
 
@@ -74,6 +75,8 @@ void setup() {
 
   // Initialize game
   initGame();
+
+  analogWrite(analogOutPin, 15);
 }
 
 
@@ -137,7 +140,7 @@ void stepGame() {
 
 int countNeighbors(int x, int y) {
 
-  // Return number of neighbors for input x/y position,
+  // Return number of neighbors for input x,y position,
   // calculated using edge-wrapping
   int count = 0;
   for (int i = -1; i <= 1; i++) {
@@ -201,8 +204,10 @@ void loop() {
   // Get touch point
   TSPoint p = ts.getPoint();
 
+
+
   // Handle touch event
-  if (p.z > ts.pressureThreshhold) {
+  if (p.z > 0) {
 
     // Calculate touch pixel coordinates
     int x = map(p.x, TS_MINX, TS_MAXX, 0, screen_width);
@@ -223,6 +228,7 @@ void loop() {
       // Set touch as active
       if (touch_active == false) {
         touch_active = true;
+        //Serial.println("Touch Started");
       }
 
       // Reset release count
@@ -237,6 +243,7 @@ void loop() {
     if (touch_active == true) {
       if (release_count >= release_threshold) {
         touch_active = false;
+        //Serial.println("Touch Ended");
       } else {
         release_count++;
       }
