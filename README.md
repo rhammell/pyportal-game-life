@@ -1,7 +1,7 @@
 # pyportal-game-life
 This project contains an Arduino sketch that builds and displays a touch-enabled version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) on an Adafruit PyPortal. 
 
-Read a full build tutorial for this project on [Hackster.io](https://www.hackster.io/rhammell/pyportal-conway-s-game-of-life-039294).
+Read the [project guide](https://www.hackster.io/rhammell/pyportal-conway-s-game-of-life-039294) on Hackster.io for a full build tutorial.
 
 ## Project Description
 <p align="center">
